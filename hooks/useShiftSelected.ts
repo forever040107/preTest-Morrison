@@ -1,9 +1,9 @@
 import { ChangeEvent, useCallback, useState } from 'react'
 
 function useShiftSelected<P>(initialState: Array<P>, change: (addOrRemove: boolean, items: Array<P>) => void) {
-  const [previousSelected, setPreviousSelected] = useState<P | null>(null)
-  const [previousChecked, setPreviousChecked] = useState<boolean>(false)
-  const [selectedOnShiftKey, setSelectedOnShiftKey] = useState<P | null>(null)
+  const [previousSelected, setPreviousSelected] = useState<P | null>(null) // shiftKey: start
+  const [isPreviousChecked, setIsPreviousChecked] = useState<boolean>(false) // add or remove
+  const [nextSelected, setNextSelected] = useState<P | null>(null) // shiftKey: end
 
   const onChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>, item: P) => {
@@ -11,24 +11,27 @@ function useShiftSelected<P>(initialState: Array<P>, change: (addOrRemove: boole
       if (event.nativeEvent.shiftKey) {
         const current = initialState.findIndex((x) => x === item)
         const previous = initialState.findIndex((x) => x === previousSelected)
-        const newEndValue = initialState.findIndex((x) => x === selectedOnShiftKey) // change select with shiftKey
+        const previousEnd = initialState.findIndex((x) => x === nextSelected) // change select with shiftKey
         const start = Math.min(current, previous)
         const end = Math.max(current, previous)
+        console.log("🚀 ~ start:", start, 'end:', end, 'current:', current, 'previous:', previous)
         if (start > -1 && end > -1) {
-          change(previousChecked, initialState.slice(start, end + 1))
-          if (newEndValue > end) {
-            change(!previousChecked, initialState.slice(end + 1, newEndValue + 1))
+          change(isPreviousChecked, initialState.slice(start, end + 1)) // end value changed after click
+          if (previousEnd > end) { // new end value & remove item
+            console.log('previousEnd > end', previousEnd, end)
+            change(!isPreviousChecked, initialState.slice(end + 1, previousEnd + 1))
           }
-          if (newEndValue < start) {
-            change(!previousChecked, initialState.slice(newEndValue, start))
+          if (previousEnd < start) { // 由下往上選, start 跟 end 交換位置, remove start item
+            console.log('previousEnd < start', previousEnd, start)
+            change(!isPreviousChecked, initialState.slice(previousEnd, start))
           }
-          setSelectedOnShiftKey(item)
+          setNextSelected(item)
           return
         }
       } else {
         setPreviousSelected(item)
-        setSelectedOnShiftKey(null)
-        setPreviousChecked(event.target.checked)
+        setNextSelected(null)
+        setIsPreviousChecked(event.target.checked)
       }
       change(event.target.checked, [item])
     },
@@ -37,10 +40,10 @@ function useShiftSelected<P>(initialState: Array<P>, change: (addOrRemove: boole
       initialState,
       previousSelected,
       setPreviousSelected,
-      previousChecked,
-      setPreviousChecked,
-      selectedOnShiftKey,
-      setSelectedOnShiftKey,
+      isPreviousChecked,
+      setIsPreviousChecked,
+      nextSelected,
+      setNextSelected,
     ]
   )
 
